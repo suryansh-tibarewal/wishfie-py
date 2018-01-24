@@ -1,6 +1,8 @@
 import shlex
 import subprocess
 import config
+import traceback
+import os
 
 
 class ProcessVideo:
@@ -10,17 +12,20 @@ class ProcessVideo:
         self.incoming_video = unique_name
         self.bucket_name = bucket_name
         self.outgoing_video = f"d_{self.incoming_video}"
-        self.outgoing_thumbnail = f"{self.outgoing_video}_gif_thumbnail"
+        self.outgoing_thumbnail = f"c_{self.outgoing_video}_thumbnail"
         pass
 
     def process(self):
         try:
             if self.download_from_s3().convert_to_mp4().convert_mp4_to_gif().upload_to_s3():
+                os.remove(self.outgoing_video)
+                os.remove(self.outgoing_thumbnail)
                 return True, self.outgoing_video, self.outgoing_thumbnail
             else:
-                return False
-        except:
-            return False
+                return False, None, None
+        except Exception as e:
+            traceback.print_exc()
+            return False, None, None
 
     def download_from_s3(self):
         self.s3.Bucket(self.bucket_name).download_file(self.incoming_video, self.outgoing_video)
@@ -32,6 +37,7 @@ class ProcessVideo:
         conversion = f'ffmpeg -y -i {self.outgoing_video} -vcodec libx264 -acodec aac -vf "scale=trunc(iw/2)*2:trunc(ih/2)*2" -movflags +faststart -f mp4 {temp_name}'
         args = shlex.split(conversion)
         subprocess.call(args)
+        os.remove(self.outgoing_video)
         self.outgoing_video = temp_name
         return self
 
@@ -43,11 +49,13 @@ class ProcessVideo:
         return True
 
     def convert_mp4_to_gif(self):
-        palette = f"/tmp/palette_{config.SERVER_ID}.png"  # have the processor id in a multiple processor ssytem
-        args = shlex.split(f'ffmpeg -i {self.outgoing_video} -vf palettegen -y {palette}')
-        subprocess.call(args)
-        args = shlex.split(f'ffmpeg -i {self.outgoing_video} -r 10 -i {palette} -lavfi paletteuse -y {self.outgoing_thumbnail}')
-        subprocess.call(args)  # based on its return value an if could be set for error handling
+        args_str = f"ffmpeg -ss 3 -t 3 -i {self.outgoing_video} -vf scale=80:-1 -r 4 -f image2pipe -vcodec ppm - | convert-im6.q16 -delay 100 -loop 0 - gif:- | sudo convert-im6.q16 -layers Optimize - gif:{self.outgoing_thumbnail}"
+        ps = subprocess.Popen(args_str,shell=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+        output = ps.communicate()[0]
+        print(output)
+        #print(args_str)
+        #args = shlex.split(args_str)
+        #subprocess.call(args_str, shell=True)
         return self
 
 ### extra info

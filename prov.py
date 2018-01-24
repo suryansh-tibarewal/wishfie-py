@@ -22,7 +22,7 @@ def inform_core(channel, method, result, collab_id, new_file_name, new_thumbnail
             "new_thumbnail": new_thumbnail
         }
         channel.basic_ack(delivery_tag=method.delivery_tag)
-        channel.basic_publish(exchange='', routing_key="DTCT", body=message)
+        channel.basic_publish(exchange='', routing_key="DTCT", body=json.dumps(message))
         return
     channel.basic_nack(delivery_tag=method.delivery_tag)
 
