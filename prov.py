@@ -17,10 +17,15 @@ print(' [*] Waiting for messages. To exit press CTRL+C')
 def inform_core(channel, method, result, collab_id, new_file_name, new_thumbnail):
     if result and not config.debug:
         message = {
-            "task_id": collab_id,
-            "new_file_name": new_file_name,
-            "new_thumbnail": new_thumbnail
-        }
+                type: config.DO_TASK,
+                status: result?0:1,
+                message: result?"Success":"Fail",
+                payload:{
+                            "task_id": collab_id,
+                            "new_file_name": new_file_name,
+                            "new_thumbnail": new_thumbnail
+                        }
+                }
         channel.basic_ack(delivery_tag=method.delivery_tag)
         channel.basic_publish(exchange='', routing_key=f"{config.TELL_CORE_QUEUE}", body=json.dumps(message))
         return
