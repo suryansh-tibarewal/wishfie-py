@@ -17,7 +17,7 @@ print(' [*] Waiting for messages. To exit press CTRL+C')
 def inform_core(channel, method, result, collab_id, new_file_name, new_thumbnail):
     if result and not config.debug:
         message = {
-                type: config.DO_TASK,
+                type: config.TASK_REPLY_FOR_TASK,
                 status: result?0:1,
                 message: result?"Success":"Fail",
                 payload:{
