@@ -9,7 +9,7 @@ s3 = utilities.create_s3_session(config.ACCESS_KEY, config.SECRET_KEY)
 
 connection = pika.BlockingConnection(pika.URLParameters(config.RABBIT_MQ_CONNECTION_STRING))
 channel = connection.channel()
-queue = r'CDT-pro_vid'
+queue =  f"{config.LISTEN_QUEUE}-{config.DO_TASK}"
 channel.queue_declare(queue=queue, durable=True)
 print(' [*] Waiting for messages. To exit press CTRL+C')
 
@@ -22,7 +22,7 @@ def inform_core(channel, method, result, collab_id, new_file_name, new_thumbnail
             "new_thumbnail": new_thumbnail
         }
         channel.basic_ack(delivery_tag=method.delivery_tag)
-        channel.basic_publish(exchange='', routing_key="DTCT", body=json.dumps(message))
+        channel.basic_publish(exchange='', routing_key=f"{config.TELL_CORE_QUEUE}", body=json.dumps(message))
         return
     channel.basic_nack(delivery_tag=method.delivery_tag)
 
